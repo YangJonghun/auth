@@ -1,35 +1,72 @@
+import "dotenv/config";
 import "reflect-metadata";
 import Koa from "koa";
-import Router from '@koa/router';
+import Router from "@koa/router";
 import { ApolloServer } from "apollo-server-koa";
 import { buildSchema } from "type-graphql";
-import {UserResolver} from './UserResolver';
 import { createConnection } from "typeorm";
-// import {createConnection} from "typeorm";
-// import {User} from "./entity/User";
+import { verify } from "jsonwebtoken";
+
+import { User } from "./entity/User";
+import { UserResolver } from "./UserResolver";
+import { createAccessToken, createRefreshToken } from "./auth";
+import { sendRefreshToken } from "./sendRefreshToken";
 
 (async () => {
-    const app = new Koa();
-    const router = new Router();
-    
-    const apolloServer = new ApolloServer({
-        schema: await buildSchema({
-            resolvers: [UserResolver]
-        })
-    });
-    
-    apolloServer.applyMiddleware({ app });
-    
-    router.get('/', (ctx, _next) => ctx.body = 'hello');
+  const app = new Koa();
+  const router = new Router();
 
-    await createConnection();
-    
-    app.use(router.routes()).use(router.allowedMethods());
+  const apolloServer = new ApolloServer({
+    schema: await buildSchema({
+      resolvers: [UserResolver]
+    }),
+    context: ({ ctx }) => ctx
+  });
 
-    app.listen(4000, () => {
-        console.log('express server started')
-    });
-})()
+  apolloServer.applyMiddleware({ app });
+
+  router.get("/", (ctx, _next) => (ctx.body = "hello"));
+
+  router.post("/refresh_token", async ctx => {
+    const token = ctx.cookies.get("jid");
+    if (!token) {
+      ctx.body = { ok: false, accessToken: "" };
+      return;
+    }
+
+    let payload: any = null;
+    try {
+      payload = verify(token, process.env.REFRESH_TOKEN_SECRET!);
+    } catch (err) {
+      ctx.body = { ok: false, accessToken: "" };
+      return;
+    }
+
+    const user = await User.findOne({ id: payload.userId });
+    if (!user) {
+      ctx.body = { ok: false, accessToken: "" };
+      return;
+    }
+
+    if (user.tokenVersion !== payload.tokenVersion) {
+      ctx.body = { ok: false, accessToken: "" };
+      return;
+    }
+
+    sendRefreshToken(ctx, createRefreshToken(user));
+
+    ctx.status = 404;
+    ctx.body = { ok: true, accessToken: createAccessToken(user) };
+  });
+
+  await createConnection();
+
+  app.use(router.routes()).use(router.allowedMethods());
+
+  app.listen(4000, () => {
+    console.log("koa server started");
+  });
+})();
 
 // createConnection().then(async connection => {
 
