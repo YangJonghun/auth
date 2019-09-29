@@ -1,17 +1,19 @@
-import React from "react";
-import ReactDOM from "react-dom";
-import ApolloClient from "apollo-boost";
-import { ApolloProvider } from "@apollo/react-hooks";
+import React from 'react';
+import ReactDOM from 'react-dom';
+import { Provider } from 'react-redux';
 
-import Routes from "./Routes";
+import App from './App';
 
-const client = new ApolloClient({
-  uri: "http://localhost:4000/graphql"
-});
+import initStore from './store/config';
+import CustomApolloProvider from './lib/CustomApolloProvider';
+
+const store = initStore();
 
 ReactDOM.render(
-  <ApolloProvider client={client}>
-    <Routes />
-  </ApolloProvider>,
-  document.getElementById("root")
+  <Provider store={store}>
+    <CustomApolloProvider>
+      <App />
+    </CustomApolloProvider>
+  </Provider>,
+  document.getElementById('root'),
 );

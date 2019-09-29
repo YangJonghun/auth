@@ -1,36 +1,53 @@
-import "dotenv/config";
-import "reflect-metadata";
-import Koa from "koa";
-import Router from "@koa/router";
-import { ApolloServer } from "apollo-server-koa";
-import { buildSchema } from "type-graphql";
-import { createConnection } from "typeorm";
-import { verify } from "jsonwebtoken";
+import 'dotenv/config';
+import 'reflect-metadata';
+import Koa from 'koa';
+import Router from '@koa/router';
+import cors from '@koa/cors';
+import { ApolloServer } from 'apollo-server-koa';
+import { buildSchema } from 'type-graphql';
+import { createConnection } from 'typeorm';
+import { verify } from 'jsonwebtoken';
 
-import { User } from "./entity/User";
-import { UserResolver } from "./UserResolver";
-import { createAccessToken, createRefreshToken } from "./auth";
-import { sendRefreshToken } from "./sendRefreshToken";
+import { User } from './entity/User';
+import { UserResolver } from './UserResolver';
+import { createAccessToken, createRefreshToken } from './auth';
+import { sendRefreshToken } from './sendRefreshToken';
+
+process.env.NODE_ENV =
+  process.env.NODE_ENV &&
+  process.env.NODE_ENV.trim().toLowerCase() == 'production'
+    ? 'production'
+    : 'development';
 
 (async () => {
   const app = new Koa();
   const router = new Router();
 
+  app.use(
+    cors({
+      origin:
+        process.env.NODE_ENV === 'development'
+          ? process.env.DEV_URL
+          : process.env.PROD_URL,
+      credentials: true,
+    }),
+  );
+
   const apolloServer = new ApolloServer({
     schema: await buildSchema({
-      resolvers: [UserResolver]
+      resolvers: [UserResolver],
     }),
-    context: ({ ctx }) => ctx
+    context: ({ ctx }) => ctx,
   });
 
-  apolloServer.applyMiddleware({ app });
+  apolloServer.applyMiddleware({ app, cors: false });
 
-  router.get("/", (ctx, _next) => (ctx.body = "hello"));
+  router.get('/', (ctx, _next) => (ctx.body = 'hello'));
 
-  router.post("/refresh_token", async ctx => {
-    const token = ctx.cookies.get("jid");
+  router.post('/refresh_token', async ctx => {
+    const token = ctx.cookies.get('jid');
     if (!token) {
-      ctx.body = { ok: false, accessToken: "" };
+      ctx.body = { ok: false, accessToken: '' };
       return;
     }
 
@@ -38,24 +55,23 @@ import { sendRefreshToken } from "./sendRefreshToken";
     try {
       payload = verify(token, process.env.REFRESH_TOKEN_SECRET!);
     } catch (err) {
-      ctx.body = { ok: false, accessToken: "" };
+      ctx.body = { ok: false, accessToken: '' };
       return;
     }
 
     const user = await User.findOne({ id: payload.userId });
     if (!user) {
-      ctx.body = { ok: false, accessToken: "" };
+      ctx.body = { ok: false, accessToken: '' };
       return;
     }
 
     if (user.tokenVersion !== payload.tokenVersion) {
-      ctx.body = { ok: false, accessToken: "" };
+      ctx.body = { ok: false, accessToken: '' };
       return;
     }
 
     sendRefreshToken(ctx, createRefreshToken(user));
 
-    ctx.status = 404;
     ctx.body = { ok: true, accessToken: createAccessToken(user) };
   });
 
@@ -64,7 +80,7 @@ import { sendRefreshToken } from "./sendRefreshToken";
   app.use(router.routes()).use(router.allowedMethods());
 
   app.listen(4000, () => {
-    console.log("koa server started");
+    console.log('koa server started');
   });
 })();
 
