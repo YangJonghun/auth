@@ -9,7 +9,7 @@ import { createConnection } from 'typeorm';
 import { verify } from 'jsonwebtoken';
 
 import { User } from './entity/User';
-import { UserResolver } from './UserResolver';
+import { UserResolver } from './resolver/UserResolver';
 import { createAccessToken, createRefreshToken } from './auth';
 import { sendRefreshToken } from './sendRefreshToken';
 

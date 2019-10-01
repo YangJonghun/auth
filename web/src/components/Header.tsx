@@ -10,6 +10,7 @@ gql`
   query CurrentUser {
     currentUser {
       email
+      name
     }
   }
 `;
@@ -38,17 +39,22 @@ const Header: React.FC = () => {
   return (
     <header>
       <div>
-        <Link to='/'>home</Link>
+        <Link to="/">home</Link>
       </div>
       <div>
-        <Link to='/register'>register</Link>
+        <Link to="/register">register</Link>
       </div>
       <div>
-        <Link to='/login'>login</Link>
+        <Link to="/login">login</Link>
       </div>
       {data && data.currentUser ? (
         <div>
-          <div>you are logged in as: {data.currentUser.email} </div>
+          <div>
+            Welcome!{' '}
+            {data.currentUser.name
+              ? data.currentUser.name
+              : data.currentUser.email}{' '}
+          </div>
           <button onClick={handleLogout}>logout</button>
         </div>
       ) : (

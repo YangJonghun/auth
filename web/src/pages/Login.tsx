@@ -16,6 +16,7 @@ gql`
       accessToken
       user {
         email
+        name
       }
     }
   }
@@ -34,48 +35,45 @@ const Login: React.FC<Props> = ({ history }) => {
     [dispatch],
   );
 
-  const onSubmit = useCallback(
-    async (e: React.FormEvent) => {
-      e.preventDefault();
-      const response = await login({
-        variables: {
-          email,
-          password,
-        },
-        update: (store, { data }) => {
-          if (!data) return null;
-          store.writeQuery<CurrentUserQuery>({
-            query: CurrentUserDocument,
-            data: {
-              currentUser: data.login.user,
-            },
-          });
-        },
-      });
-      if (response && response.data) {
-        setAccessTokenDispatcher(response.data.login.accessToken);
-      }
-      history.push('/');
-    },
-    [login, email, password, history, setAccessTokenDispatcher],
-  );
+  const onSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    const response = await login({
+      variables: {
+        email,
+        password,
+      },
+      update: (store, { data }) => {
+        if (!data) return null;
+        store.writeQuery<CurrentUserQuery>({
+          query: CurrentUserDocument,
+          data: {
+            currentUser: data.login.user,
+          },
+        });
+      },
+    });
+    if (response && response.data) {
+      setAccessTokenDispatcher(response.data.login.accessToken);
+    }
+    history.push('/');
+  };
 
   return (
     <form onSubmit={onSubmit}>
       <div>
         <input
           value={email}
-          placeholder='email'
+          placeholder="email"
           onChange={e => setEmail(e.target.value)}
         />
         <input
           value={password}
-          type='password'
-          placeholder='password'
+          type="password"
+          placeholder="password"
           onChange={e => setPassword(e.target.value)}
         />
       </div>
-      <button type='submit'>login</button>
+      <button type="submit">login</button>
     </form>
   );
 };

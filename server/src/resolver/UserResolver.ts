@@ -3,32 +3,23 @@ import {
   Query,
   Mutation,
   Arg,
-  ObjectType,
-  Field,
   Ctx,
   UseMiddleware,
 } from 'type-graphql';
 import { hash, compare } from 'bcryptjs';
-import { User } from './entity/User';
-import { CustomApolloContext } from './CustomContext';
-import { createRefreshToken, createAccessToken } from './auth';
-import { isAuth } from './isAuth';
-import { sendRefreshToken } from './sendRefreshToken';
+import { User } from '../entity/User';
+import { CustomApolloContext } from '../CustomContext';
+import { createRefreshToken, createAccessToken } from '../auth';
+import { isAuth } from '../isAuth';
+import { sendRefreshToken } from '../sendRefreshToken';
 import { getConnection } from 'typeorm';
-
-@ObjectType()
-class LoginResponse {
-  @Field()
-  accessToken: string;
-
-  @Field(() => User)
-  user: User;
-}
+import { LoginResponse } from './user/LoginResponse';
+import { RegisterInput } from './user/RegisterInput';
 
 @Resolver()
 export class UserResolver {
   @Query(() => String)
-  hello() {
+  async hello() {
     return 'hi';
   }
 
@@ -88,15 +79,20 @@ export class UserResolver {
   }
 
   @Mutation(() => Boolean)
-  async register(
-    @Arg('email') email: string,
-    @Arg('password') password: string,
-  ) {
+  async register(@Arg('data')
+  {
+    email,
+    password,
+    firstName,
+    lastName,
+  }: RegisterInput): Promise<boolean> {
     const hashedPassword = await hash(password, 12);
     try {
       await User.insert({
         email,
         password: hashedPassword,
+        firstName,
+        lastName,
       });
     } catch (err) {
       console.log(err);
